@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id        Int        @id @default(autoincrement())
+  email     String     @unique(map: "email") @db.VarChar(255)
+  password  String     @db.VarChar(255)
+  full_name String?    @db.VarChar(255)
+  age       Int?
+  avatar    String?    @db.VarChar(255)
+  deletedBy Int        @default(0)
+  isDeleted Boolean    @default(false)
+  deletedAt DateTime?  @db.Timestamp(0)
+  createdAt DateTime   @default(now()) @db.Timestamp(0)
+  updatedAt DateTime   @default(now()) @updatedAt @db.Timestamp(0)
+  products  products[]
+}
+
+model categories {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique(map: "name") @db.VarChar(255)
+  description String?    @db.Text
+  isDeleted   Boolean    @default(false)
+  createdAt   DateTime   @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime   @default(now()) @updatedAt @db.Timestamp(0)
+  products    products[]
+}
+
+model products {
+  id          Int        @id @default(autoincrement())
+  name        String     @db.VarChar(255)
+  description String?    @db.Text
+  price       Decimal    @db.Decimal(10, 2)
+  discount    Decimal?   @default(0.00) @db.Decimal(5, 2)
+  category_id Int
+  user_id     Int
+  image_url   String?    @db.VarChar(255)
+  views       Int        @default(0)
+  isDeleted   Boolean    @default(false)
+  createdAt   DateTime   @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime   @default(now()) @updatedAt @db.Timestamp(0)
+  category    categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "products_ibfk_1")
+  user        users      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "products_ibfk_2")
+
+  @@index([category_id], map: "category_id")
+  @@index([user_id], map: "user_id")
+}
