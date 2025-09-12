@@ -83,7 +83,7 @@ const authService = {
     }
 
     const tokens = tokenService.createTokens(userExist.id);
-    return tokens;
+    return { tokens, user: { ...userExist, password: undefined } };
   },
 
   refreshToken: async (req) => {

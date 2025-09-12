@@ -1,99 +1,138 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { Form, Input, Button, Card, Typography, notification } from "antd";
+import { UserOutlined, MailOutlined, LockOutlined } from "@ant-design/icons";
+import { motion } from "framer-motion"; // For animations
+
+const { Title, Text } = Typography;
 
 const Register = () => {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleRegister = async (values: any) => {
+    setLoading(true);
     try {
       await axios.post("http://localhost:3069/api/auth/register", {
-        full_name: fullName,
-        email,
-        password,
+        full_name: values.fullName,
+        email: values.email,
+        password: values.password,
       });
+
+      notification.success({
+        message: "Đăng ký thành công 🎉",
+        description: "Bạn có thể đăng nhập ngay bây giờ!",
+        placement: "topRight",
+      });
+
       navigate("/login");
     } catch (error: any) {
-      setError(error.response?.data?.message || "Đăng ký thất bại");
+      notification.error({
+        message: "Đăng ký thất bại",
+        description: error.response?.data?.message || "Vui lòng thử lại sau",
+        placement: "topRight",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[70vh]">
-      <form
-        onSubmit={handleRegister}
-        className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md"
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-blue-100">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
       >
-        <h2 className="text-3xl font-bold mb-6 text-center text-green-600">
-          Đăng ký
-        </h2>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Họ tên
-          </label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            required
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            required
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Mật khẩu
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            required
-          />
-        </div>
-
-        {error && (
-          <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
-        )}
-
-        <button
-          type="submit"
-          className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors"
+        <Card
+          className="shadow-2xl rounded-2xl p-6 bg-white/90 backdrop-blur-sm"
+          style={{ border: "none" }}
         >
-          Đăng ký
-        </button>
+          <div className="text-center mb-8">
+            <Title level={2} className="!text-3xl font-bold text-gray-800">
+              Đăng ký tài khoản
+            </Title>
+            <Text className="text-gray-500">
+              Tạo tài khoản để bắt đầu hành trình của bạn!
+            </Text>
+          </div>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Đã có tài khoản?{" "}
-          <button
-            type="button"
-            onClick={() => navigate("/login")}
-            className="text-green-600 hover:underline font-medium"
+          <Form
+            layout="vertical"
+            onFinish={handleRegister}
+            className="space-y-4"
           >
-            Đăng nhập
-          </button>
-        </p>
-      </form>
+            <Form.Item
+              label="Họ tên"
+              name="fullName"
+              rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
+            >
+              <Input
+                prefix={<UserOutlined className="text-gray-400" />}
+                placeholder="Nhập họ tên"
+                size="large"
+                className="rounded-lg"
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Email"
+              name="email"
+              rules={[
+                { required: true, message: "Vui lòng nhập email!" },
+                { type: "email", message: "Email không hợp lệ!" },
+              ]}
+            >
+              <Input
+                prefix={<MailOutlined className="text-gray-400" />}
+                placeholder="Nhập email"
+                size="large"
+                className="rounded-lg"
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Mật khẩu"
+              name="password"
+              rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
+            >
+              <Input.Password
+                prefix={<LockOutlined className="text-gray-400" />}
+                placeholder="Nhập mật khẩu"
+                size="large"
+                className="rounded-lg"
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                block
+                size="large"
+                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-300 font-semibold rounded-lg"
+              >
+                Đăng ký
+              </Button>
+            </Form.Item>
+
+            <div className="text-center">
+              <Text className="text-gray-500">
+                Đã có tài khoản?{" "}
+                <a
+                  href="/login"
+                  className="text-green-600 hover:text-green-700 font-medium"
+                >
+                  Đăng nhập ngay
+                </a>
+              </Text>
+            </div>
+          </Form>
+        </Card>
+      </motion.div>
     </div>
   );
 };
