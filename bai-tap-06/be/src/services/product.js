@@ -36,22 +36,27 @@ export const productService = {
       orderBy: {
         [sortBy]: sortOrder === "asc" ? "asc" : "desc",
       },
-      skip: offset,
-      take: Number(limit),
     });
-
-    const total = await prisma.products.count({ where: whereClause });
 
     if (q) {
       const Fuse = (await import("fuse.js")).default;
       const fuse = new Fuse(products, {
-        keys: ["name", "description"],
-        threshold: 0.3,
+        keys: ["name"],
+        threshold: 0,
       });
       const results = fuse.search(q);
       products = results.map((r) => r.item);
     }
 
-    return { data: products, total, page: Number(page), limit: Number(limit) };
+    const total = products.length;
+
+    const paginatedProducts = products.slice(offset, offset + Number(limit));
+
+    return {
+      data: paginatedProducts,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+    };
   },
 };

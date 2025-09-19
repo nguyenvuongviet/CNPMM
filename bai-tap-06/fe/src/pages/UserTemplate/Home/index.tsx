@@ -15,6 +15,7 @@ interface Product {
 const Home: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -26,8 +27,11 @@ const Home: React.FC = () => {
     sortBy: "views",
     sortOrder: "desc",
   });
+  const [viewMode, setViewMode] = useState<"infinite" | "pagination">(
+    "infinite"
+  );
 
-  const limit = 8;
+  const limit = 6;
 
   const normalizeProducts = (items: any[]): Product[] => {
     return items.map((p) => ({
@@ -71,6 +75,7 @@ const Home: React.FC = () => {
         setProducts((prev) => [...prev, ...normalized]);
       }
 
+      setTotalPages(Math.ceil(total / limit));
       setHasMore(
         (reset ? normalized.length : products.length + normalized.length) <
           total
@@ -83,21 +88,58 @@ const Home: React.FC = () => {
   };
 
   useEffect(() => {
+    setPage(1);
     fetchProducts(1, true);
-  }, [filters]);
+  }, [filters, query, viewMode]);
 
   const loadMore = () => {
     fetchProducts(page + 1, false);
   };
 
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchProducts(newPage, true);
+  };
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
-    fetchProducts(1, true);
   };
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
+
+  const renderPagination = () => (
+    <div className="flex justify-center mt-6 gap-2">
+      <button
+        onClick={() => handlePageChange(page - 1)}
+        disabled={page === 1}
+        className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-gray-300"
+      >
+        Trước
+      </button>
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+        <button
+          key={pageNum}
+          onClick={() => handlePageChange(pageNum)}
+          className={`px-4 py-2 rounded-lg ${
+            pageNum === page
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          {pageNum}
+        </button>
+      ))}
+      <button
+        onClick={() => handlePageChange(page + 1)}
+        disabled={page === totalPages}
+        className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-gray-300"
+      >
+        Sau
+      </button>
+    </div>
+  );
 
   return (
     <div className="container mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -165,7 +207,6 @@ const Home: React.FC = () => {
             <span className="text-sm">Có khuyến mãi</span>
           </div>
 
-          {/* Sắp xếp */}
           <div className="mb-5">
             <label className="block text-sm font-medium mb-1">
               Sắp xếp theo
@@ -181,7 +222,6 @@ const Home: React.FC = () => {
             </select>
           </div>
 
-          {/* Thứ tự */}
           <div>
             <label className="block text-sm font-medium mb-1">Thứ tự</label>
             <select
@@ -191,6 +231,20 @@ const Home: React.FC = () => {
             >
               <option value="desc">Giảm dần</option>
               <option value="asc">Tăng dần</option>
+            </select>
+          </div>
+
+          <div className="mt-5">
+            <label className="block text-sm font-medium mb-1">Chế độ xem</label>
+            <select
+              value={viewMode}
+              onChange={(e) =>
+                setViewMode(e.target.value as "infinite" | "pagination")
+              }
+              className="w-full p-2 border rounded-lg"
+            >
+              <option value="infinite">Infinite Scroll</option>
+              <option value="pagination">Phân trang</option>
             </select>
           </div>
         </div>
@@ -209,87 +263,164 @@ const Home: React.FC = () => {
 
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
-        <InfiniteScroll
-          dataLength={products.length}
-          next={loadMore}
-          hasMore={hasMore}
-          loader={<h4 className="text-center text-gray-500">Đang tải...</h4>}
-          endMessage={
-            <p className="text-center text-gray-500">Đã hết dữ liệu!</p>
-          }
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.length > 0 ? (
-              products.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:scale-105 transition-transform duration-300"
-                >
-                  <div className="relative">
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-full h-52 object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-52 bg-gray-100 flex items-center justify-center text-gray-400">
-                        No Image
-                      </div>
-                    )}
-                    {product.discount > 0 && (
-                      <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
-                        -{product.discount}%
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold truncate mb-1">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 line-clamp-2 mb-3">
-                      {product.description}
-                    </p>
-
-                    <div className="flex items-center gap-2 mb-2">
-                      {product.discount > 0 ? (
-                        <>
-                          <span className="text-gray-400 line-through text-sm">
-                            ${Number(product.price).toFixed(2)}
-                          </span>
-                          <span className="text-green-600 font-bold">
-                            $
-                            {(
-                              Number(product.price) *
-                              (1 - product.discount / 100)
-                            ).toFixed(2)}
-                          </span>
-                        </>
+        {viewMode === "infinite" ? (
+          <InfiniteScroll
+            dataLength={products.length}
+            next={loadMore}
+            hasMore={hasMore}
+            loader={<h4 className="text-center text-gray-500">Đang tải...</h4>}
+            endMessage={
+              <p className="text-center text-gray-500">Đã hết dữ liệu!</p>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.length > 0 ? (
+                products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:scale-105 transition-transform duration-300"
+                  >
+                    <div className="relative">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-52 object-cover"
+                        />
                       ) : (
-                        <span className="text-green-600 font-bold">
-                          ${Number(product.price).toFixed(2)}
+                        <div className="w-full h-52 bg-gray-100 flex items-center justify-center text-gray-400">
+                          No Image
+                        </div>
+                      )}
+                      {product.discount > 0 && (
+                        <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+                          -{product.discount}%
                         </span>
                       )}
                     </div>
 
-                    <div className="text-gray-400 text-sm mb-3">
-                      👀 {product.views} lượt xem
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold truncate mb-1">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                        {product.description}
+                      </p>
+
+                      <div className="flex items-center gap-2 mb-2">
+                        {product.discount > 0 ? (
+                          <>
+                            <span className="text-gray-400 line-through text-sm">
+                              ${Number(product.price).toFixed(2)}
+                            </span>
+                            <span className="text-green-600 font-bold">
+                              $
+                              {(
+                                Number(product.price) *
+                                (1 - product.discount / 100)
+                              ).toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-green-600 font-bold">
+                            ${Number(product.price).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-gray-400 text-sm mb-3">
+                        👀 {product.views} lượt xem
+                      </div>
+
+                      <button className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 px-4 rounded-full hover:from-blue-600 hover:to-blue-700 transition-colors shadow-md">
+                        Xem chi tiết
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500">
+                  Không có sản phẩm để hiển thị.
+                </p>
+              )}
+            </div>
+          </InfiniteScroll>
+        ) : (
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.length > 0 ? (
+                products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:scale-105 transition-transform duration-300"
+                  >
+                    <div className="relative">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-52 object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-52 bg-gray-100 flex items-center justify-center text-gray-400">
+                          No Image
+                        </div>
+                      )}
+                      {product.discount > 0 && (
+                        <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+                          -{product.discount}%
+                        </span>
+                      )}
                     </div>
 
-                    <button className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 px-4 rounded-full hover:from-blue-600 hover:to-blue-700 transition-colors shadow-md">
-                      Xem chi tiết
-                    </button>
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold truncate mb-1">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                        {product.description}
+                      </p>
+
+                      <div className="flex items-center gap-2 mb-2">
+                        {product.discount > 0 ? (
+                          <>
+                            <span className="text-gray-400 line-through text-sm">
+                              ${Number(product.price).toFixed(2)}
+                            </span>
+                            <span className="text-green-600 font-bold">
+                              $
+                              {(
+                                Number(product.price) *
+                                (1 - product.discount / 100)
+                              ).toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-green-600 font-bold">
+                            ${Number(product.price).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-gray-400 text-sm mb-3">
+                        👀 {product.views} lượt xem
+                      </div>
+
+                      <button className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 px-4 rounded-full hover:from-blue-600 hover:to-blue-700 transition-colors shadow-md">
+                        Xem chi tiết
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-gray-500">
-                Không có sản phẩm để hiển thị.
-              </p>
-            )}
+                ))
+              ) : (
+                <p className="text-center text-gray-500">
+                  Không có sản phẩm để hiển thị.
+                </p>
+              )}
+            </div>
+            {renderPagination()}
           </div>
-        </InfiniteScroll>
+        )}
       </section>
     </div>
   );
